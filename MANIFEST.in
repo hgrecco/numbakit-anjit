@@ -1,0 +1,7 @@
+include AUTHORS CHANGES LICENSE README.rst .coveragerc
+include .pre-commit-config.yaml
+recursive-include nbkanjit *
+exclude nbkanjit/testsuite/.pytest_cache
+exclude .editorconfig bors.toml pull_request_template.md requirements_docs.txt version.py
+global-exclude *.pyc *~ .DS_Store *__pycache__* *.pyo .travis-exclude.yml
+

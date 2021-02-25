@@ -119,21 +119,21 @@ once that the function is called. As the `Numba docs`_ says:
 
 .. note::
 
-    in [Lazy mode], compilation will be deferred until the first function
-    execution. Numba will infer the argument types at call time, and
-    generate optimized code based on this information. Numba will also
-    be able to compile separate specializations depending on the input
-    types.
+   in [Lazy mode], compilation will be deferred until the first function
+   execution. Numba will infer the argument types at call time, and
+   generate optimized code based on this information. Numba will also
+   be able to compile separate specializations depending on the input
+   types.
 
 But numba also has an **eager mode**:
 
 .. note::
 
-    In which you can also tell Numba the function signature you are expecting.
-    [..] In this case, the corresponding specialization will be compiled by the
-    decorator, and no other specialization will be allowed. This is useful
-    if you want fine-grained control over types chosen by the compiler (for
-    example, to use single-precision floats).
+   In which you can also tell Numba the function signature you are expecting.
+   [..] In this case, the corresponding specialization will be compiled by the
+   decorator, and no other specialization will be allowed. This is useful
+   if you want fine-grained control over types chosen by the compiler (for
+   example, to use single-precision floats).
 
 This can produce slightly faster code as the compiler does not need to infer
 the types. It also provides type check at definition time ensuring correctness.

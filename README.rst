@@ -19,10 +19,6 @@
 .. image:: https://coveralls.io/repos/github/hgrecco/numbakit-anjit/badge.svg?branch=main
     :target: https://coveralls.io/github/hgrecco/numbakit-anjit?branch=main
 
-.. image:: https://readthedocs.org/projects/numbakit-anjit/badge/
-    :target: http://numbakit-anjit.readthedocs.org/
-    :alt: Docs
-
 
 numbakit-anjit: leveraging numba to speed up ODE integration
 ============================================================
@@ -53,7 +49,7 @@ You can also use Python types:
 
 which are mapped to numba types.
 
-You can use
+You can use:
 
 .. code-block:: python
 
@@ -65,9 +61,9 @@ You can use
     ...     return x + y
 
 You can also use the annotation of any argument. For example,
-`F_(func).x` in this case is equivalent to `int`. Or even the
-full function `F_(func)` that will return
-`FunctionType(float64(int, float64))`
+**F_(func).x** in this case is equivalent to **int**. Or even the
+full function **F_(func)** that will return
+**FunctionType(float64(int, float64))**
 
 It also provides a manager to encapsulate (and reuse different parameters)
 
@@ -81,12 +77,16 @@ It also provides a manager to encapsulate (and reuse different parameters)
 
 even to be applied in to the standard numba njit.
 
+.. code-block:: python
+
     >>> jm = nbkanjit.JitManager(cache=True)
     >>> @jm.njit
     ... def func(x, y):
     ...     return x + y
 
 And you can teach the manager new tricks:
+
+.. code-block:: python
 
     >>> jm.mapping["array1d"] = nt.float64[:]
 
@@ -117,7 +117,7 @@ Why
 Numba `njit` is awesome. Simple to use, produces the appropriate machine code
 once that the function is called. As the `Numba docs`_ says:
 
-.. note::
+::
 
    in [Lazy mode], compilation will be deferred until the first function
    execution. Numba will infer the argument types at call time, and
@@ -127,7 +127,7 @@ once that the function is called. As the `Numba docs`_ says:
 
 But numba also has an **eager mode**:
 
-.. note::
+::
 
    In which you can also tell Numba the function signature you are expecting.
    [..] In this case, the corresponding specialization will be compiled by the

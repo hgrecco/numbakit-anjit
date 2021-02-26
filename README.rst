@@ -24,7 +24,8 @@ numbakit-anjit: leveraging numba to speed up ODE integration
 ============================================================
 
 numbakit-anjit (nbkanjit) to assist Numba_ intensive project
-by providing `anjit`, an annotation aware numba jit decorator.
+by providing `anjit`, an annotation aware numba jit decorator and
+manager object to handle Jit configuration.
 
 It runs in Python 3.7+ depending on Numba_. It is licensed under
 BSD.
@@ -114,7 +115,7 @@ and then simply enjoy it!
 Why
 ---
 
-Numba `njit` is awesome. Simple to use, produces the appropriate machine code
+Numba *njit* is awesome. Simple to use, produces the appropriate machine code
 once that the function is called. As the `Numba docs`_ says:
 
 ::
@@ -142,11 +143,16 @@ compilation is currently required to have two functions with the same signature
 to be arguments of a third one, without needing to recompile this last one in each
 case.
 
+Another think we like about *njit* is that is highly configurable using keyword
+arguments and even some configurations could be applied globally using env
+variables.
+
 While developing `numbakit-ode`_ I was missing two things:
 
 1. That eager compilation make use of function annotations
-2. A global manager object to manipulate in one place numba
-   jit options.
+2. A way to manipulate *njit* options in a centralized but
+   granular manner
+
 
 So, `numbakit-anjit` was born.
 

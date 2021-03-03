@@ -22,7 +22,7 @@ DEFAULT = object()
 
 # Default mapping
 DEFAULT_TYPE_MAPPING = {
-    None: nt.void,
+    type(None): nt.void,
     int: nt.int64,
     float: nt.float64,
     bool: nt.boolean,

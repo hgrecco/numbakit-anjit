@@ -158,6 +158,7 @@ def build_signature(func, mapping, on_missing_arg="raise", on_missing_ret="raise
         When a required annotation is not found.
     """
 
+    func.__annotations__ = typing.get_type_hints(func)
     func_sig = inspect.signature(func)
 
     sig = []

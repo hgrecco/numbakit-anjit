@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import typing
 
@@ -17,6 +19,8 @@ def test_anjit():
     def _fun1(x: int, y: float) -> float:
         """Simple doc"""
         return x + y
+
+    _fun1.__annotations__ = typing.get_type_hints(_fun1)
 
     @jm.anjit
     def fun1a(x: int, y: float) -> float:

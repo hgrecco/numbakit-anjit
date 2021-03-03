@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import typing
 
@@ -123,6 +125,8 @@ def test_anjit():
         """Simple doc"""
         return x + y
 
+    _fun1.__annotations__ = typing.get_type_hints(_fun1)
+
     @signature.anjit
     def fun1a(x: int, y: float) -> float:
         """Simple doc"""
@@ -162,12 +166,13 @@ def test_anjit_custom_mapping():
     assert fun1.nopython_signatures == fun2.nopython_signatures
 
 
-def test_function_wrapper():
-    @signature.anjit
-    def fun1a(x: int, y: float) -> float:
-        """Simple doc"""
-        return x + y
+@signature.anjit
+def fun1a(x: int, y: float) -> float:
+    """Simple doc"""
+    return x + y
 
+
+def test_function_wrapper():
     @signature.anjit
     def fun1b(x: int, f: signature.Function(fun1a).annotation) -> float:
         return f(x, 1.0 * x)

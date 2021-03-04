@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import inspect
+import typing
 
 import pytest
 from numba import njit
 from numba import types as nt
 
 from nbkanjit import exceptions, signature
+
+A = typing.TypeVar("A")
 
 
 def test_is_numba_type():
@@ -62,10 +67,10 @@ def test_build_signature():
         nt.int64, nt.float64[:]
     )
 
-    def fun(x: int, y: 888) -> None:
+    def fun(x: int, y: A) -> None:
         pass
 
-    with pytest.raises(exceptions.UnknownAnnotation, match=r".*888.*"):
+    with pytest.raises(exceptions.UnknownAnnotation, match=r".*A.*"):
         signature.build_signature(fun, signature.DEFAULT_TYPE_MAPPING)
 
 
@@ -101,9 +106,9 @@ def test_numba_types():
 
 
 def test_custom_mapping():
-    d = dict(a=nt.float64)
+    d = {A: nt.float64}
 
-    def fun(x: "a", y: "a") -> "a":  # noqa: F821
+    def fun(x: A, y: A) -> A:  # noqa: F821
         pass
 
     assert signature.build_signature(fun, d) == nt.float64(nt.float64, nt.float64)
@@ -119,6 +124,8 @@ def test_anjit():
     def _fun1(x: int, y: float) -> float:
         """Simple doc"""
         return x + y
+
+    _fun1.__annotations__ = typing.get_type_hints(_fun1)
 
     @signature.anjit
     def fun1a(x: int, y: float) -> float:
@@ -144,10 +151,10 @@ def test_anjit():
 
 def test_anjit_custom_mapping():
 
-    d = {**signature.DEFAULT_TYPE_MAPPING, "a": nt.float64}
+    d = {**signature.DEFAULT_TYPE_MAPPING, A: nt.float64}
 
     @signature.anjit(mapping=d)
-    def fun1(x: int, y: "a") -> float:  # noqa: F821
+    def fun1(x: int, y: A) -> float:  # noqa: F821
         """Simple doc"""
         return x + y
 
@@ -159,14 +166,15 @@ def test_anjit_custom_mapping():
     assert fun1.nopython_signatures == fun2.nopython_signatures
 
 
+@signature.anjit
+def fun1a(x: int, y: float) -> float:
+    """Simple doc"""
+    return x + y
+
+
 def test_function_wrapper():
     @signature.anjit
-    def fun1a(x: int, y: float) -> float:
-        """Simple doc"""
-        return x + y
-
-    @signature.anjit
-    def fun1b(x: int, f: signature.Function(fun1a)) -> float:
+    def fun1b(x: int, f: signature.Function(fun1a).annotation) -> float:
         return f(x, 1.0 * x)
 
     ft = nt.float64(nt.int64, nt.FunctionType(nt.float64(nt.int64, nt.float64)))

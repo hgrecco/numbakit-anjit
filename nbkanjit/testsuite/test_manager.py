@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import inspect
+import typing
 
 from numba import njit
 from numba import types as nt
 
 from nbkanjit import signature
 from nbkanjit.manager import JitManager
+
+A = typing.TypeVar("A")
 
 
 def test_anjit():
@@ -15,6 +20,8 @@ def test_anjit():
         """Simple doc"""
         return x + y
 
+    _fun1.__annotations__ = typing.get_type_hints(_fun1)
+
     @jm.anjit
     def fun1a(x: int, y: float) -> float:
         """Simple doc"""
@@ -24,7 +31,7 @@ def test_anjit():
     def fun1b(x: int, y: float) -> float:
         return x + y
 
-    d = {**signature.DEFAULT_TYPE_MAPPING, "a": nt.float64}
+    d = {**signature.DEFAULT_TYPE_MAPPING, A: nt.float64}
 
     @jm.anjit(mapping=d)
     def fun1c(x: int, y: float) -> float:
@@ -50,12 +57,12 @@ def test_anjit():
 
 
 def test_anjit_custom_mapping():
-    d = {**signature.DEFAULT_TYPE_MAPPING, "a": nt.float64}
+    d = {**signature.DEFAULT_TYPE_MAPPING, A: nt.float64}
 
     jm = JitManager(mapping=d)
 
     @jm.anjit
-    def fun1(x: int, y: "a") -> float:  # noqa: F821
+    def fun1(x: int, y: A) -> float:  # noqa: F821
         """Simple doc"""
         return x + y
 

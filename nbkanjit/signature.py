@@ -8,8 +8,10 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import collections
 import dataclasses
 import inspect
+import typing
 
 import numba
 from numba import types as nt
@@ -21,7 +23,7 @@ DEFAULT = object()
 
 # Default mapping
 DEFAULT_TYPE_MAPPING = {
-    None: nt.void,
+    type(None): nt.void,
     int: nt.int64,
     float: nt.float64,
     bool: nt.boolean,
@@ -43,6 +45,14 @@ class Function:
     def _return(self):
         return inspect.signature(self.func).return_annotation
 
+    @property
+    def annotation(self):
+        """Return a Callable annotation by inspecting func signature."""
+        sig = inspect.signature(self.func)
+        return typing.Callable[
+            [p.annotation for p in sig.parameters.values()], sig.return_annotation
+        ]
+
 
 def map_to_numba_type(obj, mapping):
     """Map an python value to numba type.
@@ -62,6 +72,13 @@ def map_to_numba_type(obj, mapping):
     exceptions.UnknownAnnotation
         when the object is not a valid numba type.
     """
+
+    # If obj is a Callable annotation, return numba.types.FunctionType
+    if typing.get_origin(obj) is collections.abc.Callable:
+        argument_types, return_type = typing.get_args(obj)
+        argument_types = (map_to_numba_type(t, mapping) for t in argument_types)
+        return_type = map_to_numba_type(return_type, mapping)
+        return nt.FunctionType(return_type(*argument_types))
 
     if is_numba_type(obj):
         return obj
@@ -141,6 +158,7 @@ def build_signature(func, mapping, on_missing_arg="raise", on_missing_ret="raise
         When a required annotation is not found.
     """
 
+    func.__annotations__ = typing.get_type_hints(func)
     func_sig = inspect.signature(func)
 
     sig = []
@@ -149,27 +167,17 @@ def build_signature(func, mapping, on_missing_arg="raise", on_missing_ret="raise
         if pa is func_sig.empty:
             if on_missing_arg == "raise":
                 raise exceptions.MissingAnnotation(par.name)
-            sig.append(map_to_numba_type(on_missing_arg, mapping))
-        elif isinstance(pa, Function):
-            sig.append(
-                nt.FunctionType(
-                    build_signature(pa.func, mapping, on_missing_arg, on_missing_ret)
-                )
-            )
-        else:
-            sig.append(map_to_numba_type(pa, mapping))
+            else:
+                pa = on_missing_arg
+        sig.append(map_to_numba_type(pa, mapping))
 
     ra = func_sig.return_annotation
     if ra is func_sig.empty:
         if on_missing_ret == "raise":
             raise exceptions.MissingAnnotation("return")
-        ret_type = map_to_numba_type(on_missing_ret, mapping)
-    elif isinstance(ra, Function):
-        ret_type = nt.FunctionType(
-            build_signature(ra.func, mapping, on_missing_arg.on_missing_ret)
-        )
-    else:
-        ret_type = map_to_numba_type(ra, mapping)
+        else:
+            ra = on_missing_ret
+    ret_type = map_to_numba_type(ra, mapping)
 
     return ret_type(*sig)
 

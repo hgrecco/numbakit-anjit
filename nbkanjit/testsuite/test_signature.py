@@ -166,7 +166,7 @@ def test_function_wrapper():
         return x + y
 
     @signature.anjit
-    def fun1b(x: int, f: signature.Function(fun1a)) -> float:
+    def fun1b(x: int, f: signature.Function(fun1a).annotation) -> float:
         return f(x, 1.0 * x)
 
     ft = nt.float64(nt.int64, nt.FunctionType(nt.float64(nt.int64, nt.float64)))

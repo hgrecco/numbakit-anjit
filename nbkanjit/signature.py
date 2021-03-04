@@ -8,6 +8,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import collections
 import dataclasses
 import inspect
 import typing
@@ -72,9 +73,8 @@ def map_to_numba_type(obj, mapping):
         when the object is not a valid numba type.
     """
 
-    # If obj is a Callable[[sig], ret] annotation, return FunctionType
-    # Is this the way to check it?
-    if isinstance(obj, typing.Callable) and isinstance(obj, typing._GenericAlias):
+    # If obj is a Callable annotation, return numba.types.FunctionType
+    if typing.get_origin(obj) is collections.abc.Callable:
         argument_types, return_type = typing.get_args(obj)
         argument_types = (map_to_numba_type(t, mapping) for t in argument_types)
         return_type = map_to_numba_type(return_type, mapping)

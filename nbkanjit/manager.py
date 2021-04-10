@@ -40,7 +40,7 @@ class JitManager:
         on_missing_arg="raise",
         on_missing_ret="raise",
         disable_jit=False,
-        **kwargs
+        **kwargs,
     ):
 
         if mapping is DEFAULT:
@@ -51,6 +51,8 @@ class JitManager:
         self.on_missing_ret = on_missing_ret
         self.disable_jit = disable_jit
         self.kwargs = kwargs
+
+        self._signatures = {}
 
     def njit(self, signature_or_function, *args, **kwargs):
         if self.disable_jit:
@@ -68,3 +70,58 @@ class JitManager:
             **kwargs,
         }
         return signature.anjit(func, **kwargs)
+
+    def register(self, name_or_func, func=None, *, raise_on_duplicate=True):
+        if func is None:
+            if isinstance(name_or_func, str):
+
+                def _deco(func):
+                    return self.register(
+                        name_or_func, func, raise_on_duplicate=raise_on_duplicate
+                    )
+
+                return _deco
+
+            elif not callable(name_or_func):
+                raise ValueError(
+                    "If only a single argument is used, it must be a callable."
+                )
+
+            else:
+                name_or_func, func = name_or_func.__name__, name_or_func
+
+        if raise_on_duplicate and name_or_func in self._signatures:
+            raise ValueError(f"{name_or_func} already registered.")
+
+        if signature.is_numba_signature(func):
+            self._signatures[name_or_func] = func
+        else:
+            b = signature.Builder(
+                self.mapping, self.on_missing_arg, self.on_missing_ret
+            )
+            sig = b.build_signature(func)
+            self._signatures[name_or_func] = sig
+
+    def njit_from_name(self, name_or_func=None, **kwargs):
+        if name_or_func is None:
+
+            def _deco(func):
+                return self.njit_from_name(func, **kwargs)
+
+            return _deco
+
+        if callable(name_or_func):
+            name_or_func, func = name_or_func.__name__, name_or_func
+        else:
+            func = None
+
+        def njit_decorator(func_):
+            sig = self._signatures[name_or_func]
+            return numba.njit(sig, **kwargs)(func_)
+
+        if func:
+            if isinstance(func, staticmethod):
+                return staticmethod(njit_decorator(func.__func__))
+            return njit_decorator(func)
+        else:
+            return njit_decorator

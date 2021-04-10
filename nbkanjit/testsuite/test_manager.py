@@ -76,3 +76,74 @@ def test_disable():
         return x + y
 
     assert not hasattr(fun1, "nopython_signatures")
+
+
+def test_register():
+    def fun1(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    jm = JitManager()
+
+    sig = nt.float64(nt.int64, nt.float64)
+    assert signature.is_numba_signature(sig)
+
+    jm.register("simple", sig)
+    assert jm._signatures["simple"] == sig
+
+    jm.register(fun1)
+    assert jm._signatures["fun1"] == sig
+
+    jm.register("fun1b", fun1)
+    assert jm._signatures["fun1b"] == sig
+
+    @jm.register
+    def fun2(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    assert jm._signatures["fun2"] == sig
+
+    @jm.register("fun2b")
+    def fun3(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    assert "fun3" not in jm._signatures
+    assert jm._signatures["fun2b"] == sig
+
+
+def test_use_register():
+    jm = JitManager()
+
+    sig = nt.float64(nt.int64, nt.float64)
+    assert signature.is_numba_signature(sig)
+
+    jm.register("simple", sig)
+
+    @jm.njit_from_name
+    def simple(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    assert simple.nopython_signatures == [
+        sig,
+    ]
+
+    @jm.njit_from_name()
+    def simple(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    assert simple.nopython_signatures == [
+        sig,
+    ]
+
+    @jm.njit_from_name("simple")
+    def simpleb(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    assert simpleb.nopython_signatures == [
+        sig,
+    ]

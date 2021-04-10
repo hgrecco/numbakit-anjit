@@ -78,8 +78,15 @@ def is_numba_type(obj):
     return abstract.Type in mro
 
 
+def is_numba_signature(obj):
+    """Return True if `obj` is a numba type."""
+    mro = inspect.getmro(obj.__class__)
+    return numba.core.typing.templates.Signature in mro
+
+
 def verify_mapping(mapping, raise_on_err=True):
     """Check if each value of the mapping is a valid numba type and
+
     therefore suitable to build a numba signature.
 
     Parameters

@@ -34,42 +34,24 @@ class Function:
     annotation as FunctionType
     """
 
-    func: callable
+    _func: callable
+
+    @property
+    def _name(self):
+        return self._func.__name__
 
     def __getattr__(self, item):
-        return inspect.signature(self.func).parameters[item].annotation
+        return inspect.signature(self._func).parameters[item].annotation
 
     @property
     def _return(self):
-        return inspect.signature(self.func).return_annotation
+        return inspect.signature(self._func).return_annotation
+
+    def __hash__(self):
+        return hash(self._func)
 
 
-def map_to_numba_type(obj, mapping):
-    """Map an python value to numba type.
-
-    Parameters
-    ----------
-    obj : object
-    mapping : dict
-        A dictionary mapping python types or other values into numba types.
-
-    Returns
-    -------
-    abstract.Type
-
-    Raises
-    ------
-    exceptions.UnknownAnnotation
-        when the object is not a valid numba type.
-    """
-
-    if is_numba_type(obj):
-        return obj
-
-    try:
-        return mapping[obj]
-    except KeyError:
-        raise exceptions.UnknownAnnotation(obj)
+Return = lambda func: func._return
 
 
 def is_numba_type(obj):
@@ -119,66 +101,120 @@ def verify_mapping(mapping, raise_on_err=True):
     return tuple(invalid)
 
 
-def build_signature(func, mapping, on_missing_arg="raise", on_missing_ret="raise"):
-    """Return a numba signature built from the annotations in the callable.
+class Builder:
+    def __init__(self, mapping, on_missing_arg="raise", on_missing_ret="raise"):
+        self.mapping = mapping
+        self.on_missing_arg = on_missing_arg
+        self.on_missing_ret = on_missing_ret
 
-    The `mapping` dict is used to translate Python types or other values
-    into numba types.
+    def map_to_numba_type(self, obj):
+        """Map an python value to numba type.
 
-    Parameters
-    ----------
-    func : callable
-    mapping : dict
-        A dictionary mapping python types or other values into numba types.
-    on_missing_arg : object (Default: "raise")
-        Numba type to use when an annotation is not present for a given argument.
-        By default, an exception is raised.
-    on_missing_ret: object (Default: "raise")
-        Numba type to use when an annotation is not present for the return value.
-        By default, an exception is raised.
+        Parameters
+        ----------
+        obj : object
 
-    Returns
-    -------
-    abstract.Type
-        A numba type that can be used to register the signature.
+        Returns
+        -------
+        abstract.Type
 
-    Raises
-    ------
-    MissingAnnotation
-        When a required annotation is not found.
-    """
+        Raises
+        ------
+        exceptions.UnknownAnnotation
+            when the object is not a valid numba type.
+        """
 
-    func_sig = inspect.signature(func)
+        # TODO: make it work for all containers
+        if isinstance(obj, nt.Tuple):
+            return nt.Tuple(tuple(self.map_to_numba_type(o) for o in obj))
 
-    sig = []
-    for par in func_sig.parameters.values():
-        pa = par.annotation
-        if pa is func_sig.empty:
-            if on_missing_arg == "raise":
-                raise exceptions.MissingAnnotation(par.name)
-            sig.append(map_to_numba_type(on_missing_arg, mapping))
-        elif isinstance(pa, Function):
-            sig.append(
-                nt.FunctionType(
-                    build_signature(pa.func, mapping, on_missing_arg, on_missing_ret)
-                )
-            )
+        if isinstance(obj, Function):
+            return nt.FunctionType(self.build_signature(obj._func))
+
+        if is_numba_type(obj):
+            return obj
+
+        try:
+            return self.mapping[obj]
+        except KeyError:
+            raise exceptions.UnknownAnnotation(obj)
+
+    def convert_annotation(self, name, annotation, missing_value, empty):
+        if annotation is empty:
+            if missing_value == "raise":
+                raise exceptions.MissingAnnotation(name)
+
+            return self.map_to_numba_type(missing_value)
         else:
-            sig.append(map_to_numba_type(pa, mapping))
+            return self.map_to_numba_type(annotation)
 
-    ra = func_sig.return_annotation
-    if ra is func_sig.empty:
-        if on_missing_ret == "raise":
-            raise exceptions.MissingAnnotation("return")
-        ret_type = map_to_numba_type(on_missing_ret, mapping)
-    elif isinstance(ra, Function):
-        ret_type = nt.FunctionType(
-            build_signature(ra.func, mapping, on_missing_arg.on_missing_ret)
-        )
-    else:
-        ret_type = map_to_numba_type(ra, mapping)
+    def build_signature(self, func):
+        """Return a numba signature built from the annotations in the callable.
 
-    return ret_type(*sig)
+        The `mapping` dict is used to translate Python types or other values
+        into numba types.
+
+        Parameters
+        ----------
+        func : callable
+        mapping : dict
+            A dictionary mapping python types or other values into numba types.
+        on_missing_arg : object (Default: "raise")
+            Numba type to use when an annotation is not present for a given argument.
+            By default, an exception is raised.
+        on_missing_ret: object (Default: "raise")
+            Numba type to use when an annotation is not present for the return value.
+            By default, an exception is raised.
+
+        Returns
+        -------
+        abstract.Type
+            A numba type that can be used to register the signature.
+
+        Raises
+        ------
+        MissingAnnotation
+            When a required annotation is not found.
+        """
+
+        if isinstance(func, staticmethod):
+            func = func.__func__
+        func_sig = inspect.signature(func)
+
+        pars = []
+        for par in func_sig.parameters.values():
+            try:
+                p = self.convert_annotation(
+                    par.name, par.annotation, self.on_missing_arg, func_sig.empty
+                )
+            except exceptions.MissingAnnotation as ex:
+                ex.append_info(f"_func: {func}")
+                raise ex
+            except exceptions.AnjitException as ex:
+                ex.append_info(
+                    f"_func: {func}. Argument: {par.name}, Annotation: {par.annotation}"
+                )
+                raise ex
+
+            pars.append(p)
+
+        try:
+            ret = self.convert_annotation(
+                "return",
+                func_sig.return_annotation,
+                self.on_missing_ret,
+                func_sig.empty,
+            )
+        except exceptions.MissingAnnotation as ex:
+            ex.append_info(f"_func: {func}")
+            raise ex
+        except exceptions.AnjitException as ex:
+            ex.append_info(
+                f"_func: {func}. Return annotation: {func_sig.return_annotation}"
+            )
+            raise ex
+
+        return ret(*pars)
 
 
 def anjit(
@@ -187,7 +223,7 @@ def anjit(
     mapping=DEFAULT,
     on_missing_arg="raise",
     on_missing_ret="raise",
-    **kwargs
+    **kwargs,
 ):
     """Annotation aware numba njit.
 
@@ -216,15 +252,18 @@ def anjit(
         mapping = DEFAULT_TYPE_MAPPING
 
     def njit_decorator(func_):
-        sig = build_signature(
-            func_,
-            mapping=mapping,
-            on_missing_arg=on_missing_arg,
-            on_missing_ret=on_missing_ret,
-        )
+        b = Builder(mapping, on_missing_arg, on_missing_ret)
+        sig = b.build_signature(func_)
         return numba.njit(sig, **kwargs)(func_)
 
     if func:
+        if isinstance(func, staticmethod):
+            return staticmethod(njit_decorator(func.__func__))
         return njit_decorator(func)
     else:
         return njit_decorator
+
+
+def build_signature(obj, mapping=DEFAULT, **kwargs):
+    b = Builder(mapping=mapping, **kwargs)
+    return b.build_signature(obj)

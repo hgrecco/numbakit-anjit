@@ -108,7 +108,7 @@ class Builder:
         self.on_missing_ret = on_missing_ret
 
     def map_to_numba_type(self, obj):
-        """Map an python value to numba type.
+        """Map an python type to numba type.
 
         Parameters
         ----------
@@ -140,6 +140,30 @@ class Builder:
             raise exceptions.UnknownAnnotation(obj)
 
     def convert_annotation(self, name, annotation, missing_value, empty):
+        """Convert Python annotation to numba annotation.
+
+        Parameters
+        ----------
+        name : str
+            Name of the argument.
+        annotation
+        missing_value
+            Value to be used when
+        empty
+            Value that represents an empty annotation
+            (TODO is this necessary or is always the same?)
+
+        Returns
+        -------
+        abstract.Type
+
+        Raises
+        ------
+        exceptions.MissingAnnotation
+            when the annotation is missing a not default was provided.
+        exceptions.UnknownAnnotation
+            when the object is not a valid numba type.
+        """
         if annotation is empty:
             if missing_value == "raise":
                 raise exceptions.MissingAnnotation(name)
@@ -240,7 +264,7 @@ def anjit(
         Numba type to use when an annotation is not present for the return value.
         By default, an exception is raised.
     **kwargs
-        Extra keyword arguemnts are passed to the `numba.njit`
+        Extra keyword arguments are passed to the `numba.njit`
 
     Returns
     -------
@@ -264,6 +288,21 @@ def anjit(
         return njit_decorator
 
 
-def build_signature(obj, mapping=DEFAULT, **kwargs):
+def build_signature(func, mapping=DEFAULT, **kwargs):
+    """Short for Builder(mapping, **kwargs).signature(func)
+
+    Parameters
+    ----------
+    func : callable
+        Function to build a numba signture
+    mapping : dict (default: DEFAULT_MAPPING)
+        A dictionary mapping python types or other values into numba types.
+    **kwargs
+        Extra keyword arguments are passed to Builder.
+
+    Returns
+    -------
+    numba signature
+    """
     b = Builder(mapping=mapping, **kwargs)
-    return b.build_signature(obj)
+    return b.build_signature(func)

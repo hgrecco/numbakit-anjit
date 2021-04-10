@@ -93,6 +93,47 @@ And you can teach the manager new tricks:
 
 by mapping any python object into a numba type.
 
+And a way to register a signature as a template (tmpl):
+
+.. code-block:: python
+
+    >>> import nbkanjit
+    >>> jm = nbkanjit.JitManager()
+    >>> jm.register("nice", nt.float64((nt.float64, nt.float64)))
+
+and then use it for non-annotated function by explicitly name:
+
+.. code-block:: python
+
+    >>> @jm.njit_tmpl("nice")
+    ... def other_func(x, y):
+    ...     return x + y
+
+or using the name of the function:
+
+.. code-block:: python
+
+    >>> @jm.njit_tmpl
+    ... def nice(x, y):
+    ...     return x + y
+
+You can register directly from a function:
+
+.. code-block:: python
+
+    >>> @jm.register("nice")
+    ... def _(x: float, y:float) -> nt.float64:
+    ...     pass
+
+or again taking the function name:
+
+.. code-block:: python
+
+    >>> @jm.register
+    ... def nice(x: float, y:float) -> nt.float64:
+    ...     pass
+
+
 
 Quick Installation
 ------------------

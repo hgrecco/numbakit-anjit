@@ -121,7 +121,7 @@ def test_use_register():
 
     jm.register("simple", sig)
 
-    @jm.njit_from_name
+    @jm.njit_tmpl
     def simple(x: int, y: float) -> float:
         """Simple doc"""
         return x + y
@@ -130,7 +130,7 @@ def test_use_register():
         sig,
     ]
 
-    @jm.njit_from_name()
+    @jm.njit_tmpl()
     def simple(x: int, y: float) -> float:
         """Simple doc"""
         return x + y
@@ -139,11 +139,31 @@ def test_use_register():
         sig,
     ]
 
-    @jm.njit_from_name("simple")
+    @jm.njit_tmpl("simple")
     def simpleb(x: int, y: float) -> float:
         """Simple doc"""
         return x + y
 
     assert simpleb.nopython_signatures == [
+        sig,
+    ]
+
+    def simple(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    test = jm.njit_tmpl(simple)
+
+    assert test.nopython_signatures == [
+        sig,
+    ]
+
+    def test(x: int, y: float) -> float:
+        """Simple doc"""
+        return x + y
+
+    test = jm.njit_tmpl("simple", test)
+
+    assert test.nopython_signatures == [
         sig,
     ]

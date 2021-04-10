@@ -10,7 +10,7 @@
 
 from .exceptions import MissingAnnotation, NotNumbaSignature, UnknownAnnotation
 from .manager import JitManager
-from .signature import Function, anjit
+from .signature import Function, Return, anjit
 
 try:
     from importlib.metadata import version

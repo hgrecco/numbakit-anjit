@@ -51,7 +51,7 @@ class Function:
         return hash(self._func)
 
 
-Return = lambda func: func._return
+Return = lambda func: Function(func)._return
 
 
 def is_numba_type(obj):

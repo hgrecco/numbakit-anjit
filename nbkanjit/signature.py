@@ -37,10 +37,16 @@ class Function:
     _func: callable
 
     @property
-    def _name(self):
+    def name(self):
         return self._func.__name__
 
     def __getattr__(self, item):
+        if item == "__name":
+            return inspect.signature(self._func).parameters["_name"].annotation
+
+        elif item == "_name":
+            return inspect.signature(self._func).parameters["name"].annotation
+
         return inspect.signature(self._func).parameters[item].annotation
 
     @property

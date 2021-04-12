@@ -175,3 +175,6 @@ class JitManager:
             return numba.njit(sig, **kwargs)(func.__func__)
 
         return numba.njit(sig, **kwargs)(func)
+
+    def f(self, name):
+        return signature.nt.FunctionType(self._signatures[name])

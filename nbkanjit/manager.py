@@ -135,6 +135,7 @@ class JitManager:
             )
             sig = b.build_signature(func)
             self._signatures[name_or_func] = sig
+            return func
 
     def njit_tmpl(self, name_or_func=None, func=None, /, **kwargs):
         """Annotation aware numba njit, using a previously registered signature.

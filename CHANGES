@@ -5,8 +5,9 @@ numbakit-anjit Changelog
 0.2 (unreleased)
 ----------------
 
-- Nothing changed yet.
-
+- Abilitity to register and reuse signatures.
+- Improved exception hierarchy.
+- Deprecate Python 3.7 and test for Python 3.9.
 
 0.1 (2021-02-25)
 ----------------
